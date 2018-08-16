@@ -15,14 +15,20 @@ const server = http.createServer((req, res) => {
   const path = parsedUrl.pathname;
   const trimmedPath = path.replace(/^\/+|\/+$/g, '');
 
+  // Get the query string as an object
+  const queryStringObject = parsedUrl.query;
+
   // Get the HTTP Method
   const method = req.method.toLowerCase();
+
+  // Get the headers as an object
+  const { headers } = req;
 
   // Send the response
   res.end('Hello World\n');
 
   // Log the request path
-  console.log(`Request receieved on path : ${trimmedPath} with method: ${method}`);
+  console.log('Request received with these headers: ', headers);
 });
 
 // Start the server, and have it listen to port 3000
