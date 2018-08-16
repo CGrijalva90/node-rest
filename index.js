@@ -9,6 +9,12 @@ const url = require('url');
 const { StringDecoder } = require('string_decoder');
 const config = require('./config');
 const fs = require('fs');
+const _data = require('./lib/data');
+
+// TESTING
+_data.create('test', 'anotherFile', { name: 'faggot' }, err => {
+  console.log('faggot', err);
+});
 
 // Instantiate the HTTP server
 const httpServer = http.createServer((req, res) => {
@@ -101,10 +107,9 @@ const unifiedServer = (req, res) => {
 // Define the handlers
 const handlers = {};
 
-// Sample handler
-handlers.sample = (data, callback) => {
-  // Callback a http status code, and a payload object
-  callback(406, { name: 'sample handler' });
+// Ping handler
+handlers.ping = (data, callback) => {
+  callback(200);
 };
 
 // Not Found handler
@@ -114,5 +119,5 @@ handlers.notFound = (data, callback) => {
 
 // Define a request router
 const router = {
-  sample: handlers.sample
+  ping: handlers.ping
 };
