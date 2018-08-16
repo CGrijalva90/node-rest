@@ -11,11 +11,6 @@ const config = require('./config');
 const fs = require('fs');
 const _data = require('./lib/data');
 
-// TESTING
-_data.create('test', 'anotherFile', { name: 'faggot' }, err => {
-  console.log('faggot', err);
-});
-
 // Instantiate the HTTP server
 const httpServer = http.createServer((req, res) => {
   unifiedServer(req, res);
