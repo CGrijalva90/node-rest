@@ -93,6 +93,7 @@ app.client.request = function(
   // Send the payload as JSON
   const payloadString = JSON.stringify(payload);
   xhr.send(payloadString);
+  console.log(`payload: ${payloadString}`);
 };
 
 // Bind the logout button
@@ -109,7 +110,7 @@ app.bindLogoutButton = function() {
 // Log the user out then redirect them
 app.logUserOut = function(redirectUser) {
   // Set redirectUser to default to true
-  redirectUser = typeof (redirectUser) == 'boolean' ? redirectUser : true;
+  redirectUser = typeof redirectUser == 'boolean' ? redirectUser : true;
 
   // Get the current token id
   const tokenId =
@@ -153,6 +154,7 @@ app.bindForms = function() {
 
         // Hide the error message (if it's currently shown due to a previous error)
         document.querySelector(`#${formId} .formError`).style.display = 'none';
+        document.querySelector(`#${formId} .formError`).style.display = 'none';
 
         // Hide the success message (if it's currently shown due to a previous error)
         if (document.querySelector(`#${formId} .formSuccess`)) {
@@ -166,8 +168,18 @@ app.bindForms = function() {
         for (let i = 0; i < elements.length; i++) {
           if (elements[i].type !== 'submit') {
             // Determine class of element and set value accordingly
-            const classOfElement = typeof (elements[i].classList.value) == 'string' && elements[i].classList.value.length > 0 ? elements[i].classList.value : '';
-            const valueOfElement = elements[i].type == 'checkbox' && classOfElement.indexOf('multiselect') == -1 ? elements[i].checked : classOfElement.indexOf('intval') == -1 ? elements[i].value : parseInt(elements[i].value); // eslint-disable-line
+            const classOfElement =
+              typeof elements[i].classList.value == 'string' &&
+              elements[i].classList.value.length > 0
+                ? elements[i].classList.value
+                : '';
+            const valueOfElement =
+              elements[i].type === 'checkbox' &&
+              classOfElement.indexOf('multiselect') === -1
+                ? elements[i].checked
+                : classOfElement.indexOf('intval') === -1
+                  ? elements[i].value
+                  : parseInt(elements[i].value); // eslint-disable-line
             const elementIsChecked = elements[i].checked;
             // Override the method of the form if the input's name is _method
             let nameOfElement = elements[i].name;
@@ -178,10 +190,18 @@ app.bindForms = function() {
               if (nameOfElement === 'httpmethod') {
                 nameOfElement = 'method';
               }
+              // Create an payload field named "id" if the elements name is actually uid
+              if (nameOfElement === 'uid') {
+                nameOfElement = 'id';
+              }
               // If the element has the class "multiselect" add its value(s) as array elements
               if (classOfElement.indexOf('multiselect') > -1) {
                 if (elementIsChecked) {
-                  payload[nameOfElement] = typeof (payload[nameOfElement]) == 'object' && payload[nameOfElement] instanceof Array ? payload[nameOfElement] : [];
+                  payload[nameOfElement] =
+                    typeof payload[nameOfElement] == 'object' &&
+                    payload[nameOfElement] instanceof Array
+                      ? payload[nameOfElement]
+                      : [];
                   payload[nameOfElement].push(valueOfElement);
                 }
               } else {
@@ -220,8 +240,9 @@ app.bindForms = function() {
                 ).innerHTML = error;
 
                 // Show (unhide) the form error field on the form
-                document.querySelector(`#${formId} .formError`).style.display =
-                  'block';
+                document.querySelector(
+                  `#${formId} .formError`
+                ).style.display = 'block';
               }
             } else {
               // If successful, send to form response processor
@@ -275,7 +296,11 @@ app.formResponseProcessor = (formId, requestPayload, responsePayload) => {
     window.location = '/checks/all';
   }
   // If forms saved successfully and they have success messages, show them
-  const formsWithSuccessMessages = ['accountEdit1', 'accountEdit2'];
+  const formsWithSuccessMessages = [
+    'accountEdit1',
+    'accountEdit2',
+    'checksEdit1'
+  ];
   if (formsWithSuccessMessages.indexOf(formId) > -1) {
     document.querySelector(`#${formId} .formSuccess`).style.display = 'block';
   }
@@ -287,6 +312,10 @@ app.formResponseProcessor = (formId, requestPayload, responsePayload) => {
 
   // If the user just created a new check successfully, redirect back to the dashboard
   if (formId === 'checksCreate') {
+    window.location = '/checks/all';
+  }
+  // If the user just deleted a check, redirect them to the dashboard
+  if (formId === 'checksEdit2') {
     window.location = '/checks/all';
   }
 };
@@ -400,6 +429,11 @@ app.loadDataOnPage = function() {
   if (primaryClass === 'checksList') {
     app.loadChecksListPage();
   }
+
+  // Logic for check details page
+  if (primaryClass === 'checksEdit') {
+    app.loadChecksEditPage();
+  }
 };
 
 // Load the account edit page specifically
@@ -449,71 +483,163 @@ app.loadAccountEditPage = function() {
 };
 
 // Load the dashboard page specifically
-app.loadChecksListPage = function () {
+app.loadChecksListPage = function() {
   // Get the phone number from the current token, or log the user out if none is there
-  const phone = typeof (app.config.sessionToken.phone) == 'string' ? app.config.sessionToken.phone : false;
+  const phone =
+    typeof app.config.sessionToken.phone == 'string'
+      ? app.config.sessionToken.phone
+      : false;
   if (phone) {
     // Fetch the user data
     const queryStringObject = {
       phone
     };
-    app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, (statusCode, responsePayload) => {
-      if (statusCode === 200) {
-        // Determine how many checks the user has
-        const allChecks = typeof (responsePayload.checks) == 'object' && responsePayload.checks instanceof Array && responsePayload.checks.length > 0 ? responsePayload.checks : [];
-        if (allChecks.length > 0) {
-          // Show each created check as a new row in the table
-          allChecks.forEach(checkId => {
-            // Get the data for the check
-            const newQueryStringObject = {
-              id: checkId
-            };
-            app.client.request(undefined, 'api/checks', 'GET', newQueryStringObject, undefined, (statusCode, responsePayload) => {
-              if (statusCode === 200) {
-                const checkData = responsePayload;
-                // Make the check data into a table row
-                const table = document.getElementById('checksListTable');
-                const tr = table.insertRow(-1);
-                tr.classList.add('checkRow');
-                const td0 = tr.insertCell(0);
-                const td1 = tr.insertCell(1);
-                const td2 = tr.insertCell(2);
-                const td3 = tr.insertCell(3);
-                const td4 = tr.insertCell(4);
-                td0.innerHTML = responsePayload.method.toUpperCase();
-                td1.innerHTML = `${responsePayload.protocol}://`;
-                td2.innerHTML = responsePayload.url;
-                const state = typeof (responsePayload.state) == 'string' ? responsePayload.state : 'unknown';
-                td3.innerHTML = state;
-                // td4.innerHTML = '<a href="/checks/edit?id=' + responsePayload.id + '">View / Edit / Delete</a>';
-                td4.innerHTML = `<a href="/checks/edit?id=${responsePayload.id}>View / Edit / Delete</a>`;
-              } else {
-                console.log('Error trying to load check ID: ', checkId);
-              }
+    app.client.request(
+      undefined,
+      'api/users',
+      'GET',
+      queryStringObject,
+      undefined,
+      (statusCode, responsePayload) => {
+        if (statusCode === 200) {
+          // Determine how many checks the user has
+          const allChecks =
+            typeof responsePayload.checks == 'object' &&
+            responsePayload.checks instanceof Array &&
+            responsePayload.checks.length > 0
+              ? responsePayload.checks
+              : [];
+          if (allChecks.length > 0) {
+            // Show each created check as a new row in the table
+            allChecks.forEach(checkId => {
+              // Get the data for the check
+              const newQueryStringObject = {
+                id: checkId
+              };
+              app.client.request(
+                undefined,
+                'api/checks',
+                'GET',
+                newQueryStringObject,
+                undefined,
+                (statusCode, responsePayload) => {
+                  if (statusCode === 200) {
+                    const checkData = responsePayload;
+                    // Make the check data into a table row
+                    const table = document.getElementById('checksListTable');
+                    const tr = table.insertRow(-1);
+                    tr.classList.add('checkRow');
+                    const td0 = tr.insertCell(0);
+                    const td1 = tr.insertCell(1);
+                    const td2 = tr.insertCell(2);
+                    const td3 = tr.insertCell(3);
+                    const td4 = tr.insertCell(4);
+                    td0.innerHTML = responsePayload.method.toUpperCase();
+                    td1.innerHTML = `${responsePayload.protocol}://`;
+                    td2.innerHTML = responsePayload.url;
+                    const state =
+                      typeof responsePayload.state == 'string'
+                        ? responsePayload.state
+                        : 'unknown';
+                    td3.innerHTML = state;
+                    td4.innerHTML =
+                      '<a href="/checks/edit?id=' +
+                      responsePayload.id +
+                      '">View / Edit / Delete</a>'; // eslint-disable-line
+                  } else {
+                    console.log('Error trying to load check ID: ', checkId);
+                  }
+                }
+              );
             });
-          });
 
-          if (allChecks.length < 5) {
+            if (allChecks.length < 5) {
+              // Show the createCheck CTA
+              document.getElementById('createCheckCTA').style.display = 'block';
+            }
+          } else {
+            // Show 'you have no checks' message
+            document.getElementById('noChecksMessage').style.display =
+              'table-row';
+
             // Show the createCheck CTA
             document.getElementById('createCheckCTA').style.display = 'block';
           }
         } else {
-          // Show 'you have no checks' message
-          document.getElementById('noChecksMessage').style.display = 'table-row';
-
-          // Show the createCheck CTA
-          document.getElementById('createCheckCTA').style.display = 'block';
+          // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
+          app.logUserOut();
         }
-      } else {
-        // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
-        app.logUserOut();
       }
-    });
+    );
   } else {
     app.logUserOut();
   }
 };
 
+// Load the checks edit page specifically
+app.loadChecksEditPage = function() {
+  // Get the check id from the query string, if none is found then redirect back to dashboard
+  const id =
+    typeof window.location.href.split('=')[1] == 'string' &&
+    window.location.href.split('=')[1].length > 0
+      ? window.location.href.split('=')[1]
+      : false;
+  if (id) {
+    // Fetch the check data
+    const queryStringObject = {
+      id
+    };
+    app.client.request(
+      undefined,
+      'api/checks',
+      'GET',
+      queryStringObject,
+      undefined,
+      (statusCode, responsePayload) => {
+        if (statusCode === 200) {
+          // Put the hidden id field into both forms
+          const hiddenIdInputs = document.querySelectorAll(
+            'input.hiddenIdInput'
+          );
+          for (let i = 0; i < hiddenIdInputs.length; i++) {
+            hiddenIdInputs[i].value = responsePayload.id;
+          }
+
+          // Put the data into the top form as values where needed
+          document.querySelector('#checksEdit1 .displayIdInput').value =
+            responsePayload.id;
+          document.querySelector('#checksEdit1 .displayStateInput').value =
+            responsePayload.state;
+          document.querySelector('#checksEdit1 .protocolInput').value =
+            responsePayload.protocol;
+          document.querySelector('#checksEdit1 .urlInput').value =
+            responsePayload.url;
+          document.querySelector('#checksEdit1 .methodInput').value =
+            responsePayload.method;
+          document.querySelector('#checksEdit1 .timeoutInput').value =
+            responsePayload.timeoutSeconds;
+          const successCodeCheckboxes = document.querySelectorAll(
+            '#checksEdit1 input.successCodesInput'
+          );
+          for (let i = 0; i < successCodeCheckboxes.length; i++) {
+            if (
+              responsePayload.successCodes.indexOf(
+                parseInt(successCodeCheckboxes[i].value)
+              ) > -1
+            ) {
+              successCodeCheckboxes[i].checked = true;
+            }
+          }
+        } else {
+          // If the request comes back as something other than 200, redirect back to dashboard
+          window.location = '/checks/all';
+        }
+      }
+    );
+  } else {
+    window.location = '/checks/all';
+  }
+};
 
 // Loop to renew token often
 app.tokenRenewalLoop = function() {
