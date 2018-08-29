@@ -173,13 +173,15 @@ app.bindForms = function() {
               elements[i].classList.value.length > 0
                 ? elements[i].classList.value
                 : '';
+            /* eslint-disable */
             const valueOfElement =
               elements[i].type === 'checkbox' &&
               classOfElement.indexOf('multiselect') === -1
                 ? elements[i].checked
                 : classOfElement.indexOf('intval') === -1
                   ? elements[i].value
-                  : parseInt(elements[i].value); // eslint-disable-line
+                  : parseInt(elements[i].value);
+            /* eslint-enable */
             const elementIsChecked = elements[i].checked;
             // Override the method of the form if the input's name is _method
             let nameOfElement = elements[i].name;
@@ -542,10 +544,12 @@ app.loadChecksListPage = function() {
                         ? responsePayload.state
                         : 'unknown';
                     td3.innerHTML = state;
+                    /* eslint-disable */
                     td4.innerHTML =
                       '<a href="/checks/edit?id=' +
                       responsePayload.id +
-                      '">View / Edit / Delete</a>'; // eslint-disable-line
+                      '">View / Edit / Delete</a>';
+                      /* eslint-enable */
                   } else {
                     console.log('Error trying to load check ID: ', checkId);
                   }
