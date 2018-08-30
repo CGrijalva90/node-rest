@@ -1,7 +1,7 @@
 /*
 * Primary file for the API
 */
-
+/* eslint-disable */
 // Dependencies
 const server = require('./lib/server');
 const workers = require('./lib/workers');
